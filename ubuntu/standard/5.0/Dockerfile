@@ -79,18 +79,6 @@ RUN set -ex \
     && apt-get install -y -qq google-chrome-stable \
     && google-chrome --version
 
-## Install ChromeDriver
-#RUN set -ex \
-#    && CHROME_VERSION=`google-chrome --version | awk -F '[ .]' '{print $3"."$4"."$5}'` \
-#    && CHROME_DRIVER_VERSION=`wget -qO- chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION` \
-#    && wget -qO /tmp/chromedriver_linux64.zip https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip \
-#    && unzip -q /tmp/chromedriver_linux64.zip -d /opt \
-#    && rm /tmp/chromedriver_linux64.zip \
-#    && mv /opt/chromedriver /opt/chromedriver-$CHROME_DRIVER_VERSION \
-#    && chmod 755 /opt/chromedriver-$CHROME_DRIVER_VERSION \
-#    && ln -s /opt/chromedriver-$CHROME_DRIVER_VERSION /usr/bin/chromedriver \
-#    && chromedriver --version
-
 # Install stunnel
 RUN set -ex \
    && STUNNEL_VERSION=5.64 \
@@ -143,31 +131,21 @@ ARG N_SRC_DIR="$SRC_DIR/n"
 RUN git clone https://github.com/tj/n $N_SRC_DIR \
      && cd $N_SRC_DIR && make install 
 
-#ruby
-ARG RBENV_SRC_DIR="/usr/local/rbenv"
-
-ENV PATH="/root/.rbenv/shims:$RBENV_SRC_DIR/bin:$RBENV_SRC_DIR/shims:$PATH" \
-    RUBY_BUILD_SRC_DIR="$RBENV_SRC_DIR/plugins/ruby-build"
-
-RUN set -ex \
-    && git clone https://github.com/rbenv/rbenv.git $RBENV_SRC_DIR \
-    && mkdir -p $RBENV_SRC_DIR/plugins \
-    && git clone https://github.com/rbenv/ruby-build.git $RUBY_BUILD_SRC_DIR \
-    && sh $RUBY_BUILD_SRC_DIR/install.sh
-
 #python
 RUN curl https://pyenv.run | bash
 ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
 
+# Install ansible
+#ENV PYTHONUNBUFFERED=1
+#RUN apk add --update --no-cache python3 git aws-cli bash zip openssh && ln -sf python3 /usr/bin/python
+RUN apt install -y python3-pip
+#RUN python -m ensurepip
+RUN pip3 install --no-cache --upgrade pip setuptools
+RUN pip3 install ansible==5.9.0 boto3 botocore
+
 #php
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
 ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
-
-#go
-RUN git clone https://github.com/syndbg/goenv.git $HOME/.goenv
-ENV PATH="/root/.goenv/shims:/root/.goenv/bin:/go/bin:$PATH"
-ENV GOENV_DISABLE_GOPATH=1
-ENV GOPATH="/go"
 
 #=======================End of layer: tools  =================
 FROM tools AS runtimes
@@ -262,8 +240,6 @@ FROM runtimes_n_corretto AS std_v5
 RUN n $NODE_20_VERSION
 RUN pyenv  global $PYTHON_39_VERSION
 RUN phpenv global $PHP_80_VERSION
-RUN rbenv  global $RUBY_27_VERSION
-RUN goenv global  $GOLANG_15_VERSION
 
 # Configure SSH
 COPY ssh_config /root/.ssh/config
