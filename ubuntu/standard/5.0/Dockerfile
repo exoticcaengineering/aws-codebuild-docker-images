@@ -57,7 +57,6 @@ RUN useradd codebuild-user
 
 #=======================End of layer: core  =================
 
-
 FROM core AS tools
 
 # Install Firefox
@@ -156,6 +155,7 @@ FROM tools AS runtimes
 ENV NODE_16_VERSION="16.15.1"
 ENV NODE_18_VERSION="18.18.2"
 ENV NODE_20_VERSION="20.18.0"
+ENV NODE_22_VERSION="22.11.0"
 
 RUN     n $NODE_16_VERSION && npm install --save-dev -g -f grunt && npm install --save-dev -g -f grunt-cli && npm install --save-dev -g -f webpack \
      && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
@@ -178,6 +178,15 @@ RUN     n $NODE_20_VERSION && npm install --save-dev -g -f grunt && npm install 
      && NODE_MAJOR=20 \
      && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
      && apt-get update && apt-get install nodejs -y
+
+RUN     n $NODE_22_VERSION && npm install --save-dev -g -f grunt && npm install --save-dev -g -f grunt-cli && npm install --save-dev -g -f webpack \
+     && apt-get update && apt-get install -y ca-certificates curl gnupg \
+     && mkdir -vp /etc/apt/keyrings \
+     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --batch --yes --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+     && NODE_MAJOR=22 \
+     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+     && apt-get update && apt-get install nodejs -y
+
 
 #****************      END NODEJS     ****************************************************
 
