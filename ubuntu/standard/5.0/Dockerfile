@@ -193,8 +193,8 @@ RUN     n $NODE_22_VERSION && npm install --save-dev -g -f grunt && npm install 
 
 #****************      PHP     ****************************************************
 ENV PHP_80_VERSION="8.0.18"
-ENV PHP_81_VERSION="8.1.28"
-ENV PHP_83_VERSION="8.3.16"
+ENV PHP_81_VERSION="8.1.27"
+ENV PHP_83_VERSION="8.3.13"
 
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
 ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
