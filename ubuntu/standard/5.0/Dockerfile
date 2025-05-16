@@ -20,6 +20,7 @@ RUN set -ex \
     && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF \
     && apt-get install software-properties-common -y -qq --no-install-recommends \
     && apt-add-repository -y ppa:git-core/ppa \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
     && apt-get update \
     && apt-get install git=1:2.* -y -qq --no-install-recommends \
     && git version \
@@ -45,8 +46,8 @@ RUN set -ex \
           libsvn1 libsvn-perl libtcl8.6 libtidy-dev libtimedate-perl \
           libtool libwebp-dev libxml2-dev libxml2-utils libxslt1-dev \
           libyaml-dev libyaml-perl llvm locales make mlocate \
-          netbase openssl patch pkg-config procps python3-configobj \
-          python-openssl rsync sgml-base sgml-data \
+          netbase openssl patch pkg-config procps python3.11 python3.11-distutils \
+          python3-configobj python3.11-venv python-openssl rsync sgml-base sgml-data \
           tar tcl tcl8.6 tk tk-dev unzip wget xfsprogs xml-core xmlto xsltproc \
           libzip5 libzip-dev vim xvfb xz-utils zip zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -131,6 +132,8 @@ RUN git clone https://github.com/tj/n $N_SRC_DIR \
      && cd $N_SRC_DIR && make install 
 
 #python
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python3 && python3 --version
+
 RUN curl https://pyenv.run | bash
 ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
 
@@ -138,9 +141,13 @@ ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
 #ENV PYTHONUNBUFFERED=1
 #RUN apk add --update --no-cache python3 git aws-cli bash zip openssh && ln -sf python3 /usr/bin/python
 RUN apt install -y python3-pip
-#RUN python -m ensurepip
-RUN pip3 install --no-cache --upgrade pip setuptools
-RUN pip3 install ansible==5.9.0 boto3 botocore
+# Install Python 3.11 and pip
+RUN apt install -y python3-pip python3.11-venv \
+    && python3.11 -m ensurepip --upgrade \
+    && python3.11 -m pip install --no-cache-dir --upgrade pip setuptools
+RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.16.0 boto3 botocore
+#DEBUG line, remove when not needed
+RUN ansible --version
 
 #php
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
@@ -152,24 +159,8 @@ FROM tools AS runtimes
 
 #****************      NODEJS     ****************************************************
 
-ENV NODE_16_VERSION="16.15.1"
-ENV NODE_18_VERSION="18.18.2"
 ENV NODE_20_VERSION="20.18.0"
 ENV NODE_22_VERSION="22.11.0"
-
-RUN     n $NODE_16_VERSION && npm install --save-dev -g -f grunt && npm install --save-dev -g -f grunt-cli && npm install --save-dev -g -f webpack \
-     && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
-     && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list \
-     && apt-get update && apt-get install -y -qq --no-install-recommends yarn \
-     && yarn --version \
-     && cd / && rm -rf $N_SRC_DIR && rm -rf /tmp/*
-
-RUN     n $NODE_18_VERSION && npm install --save-dev -g -f grunt && npm install --save-dev -g -f grunt-cli && npm install --save-dev -g -f webpack \
-     && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
-     && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list \
-     && apt-get update && apt-get install -y -qq --no-install-recommends yarn \
-     && yarn --version \
-     && cd / && rm -rf $N_SRC_DIR && rm -rf /tmp/*
 
 RUN     n $NODE_20_VERSION && npm install --save-dev -g -f grunt && npm install --save-dev -g -f grunt-cli && npm install --save-dev -g -f webpack \
      && apt-get update && apt-get install -y ca-certificates curl gnupg \
@@ -192,20 +183,10 @@ RUN     n $NODE_22_VERSION && npm install --save-dev -g -f grunt && npm install 
 
 
 #****************      PHP     ****************************************************
-ENV PHP_80_VERSION="8.0.18"
-ENV PHP_81_VERSION="8.1.27"
-ENV PHP_83_VERSION="8.3.13"
+ENV PHP_83_VERSION="8.3.16"
 
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
 ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
-
-COPY tools/runtime_configs/php/$PHP_80_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_80_VERSION
-RUN phpenv install $PHP_80_VERSION && rm -rf /tmp/* && phpenv global $PHP_80_VERSION
-RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_80_VERSION/etc/conf.d/memory.ini"
-
-COPY tools/runtime_configs/php/$PHP_81_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_81_VERSION
-RUN phpenv install $PHP_81_VERSION && rm -rf /tmp/* && phpenv global $PHP_81_VERSION
-RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_81_VERSION/etc/conf.d/memory.ini"
 
 COPY tools/runtime_configs/php/$PHP_83_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_83_VERSION
 RUN phpenv install $PHP_83_VERSION && rm -rf /tmp/* && phpenv global $PHP_83_VERSION
