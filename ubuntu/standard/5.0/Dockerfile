@@ -49,7 +49,7 @@ RUN set -ex \
           netbase openssl patch pkg-config procps python3.11 python3.11-distutils \
           python3-configobj python3.11-venv python-openssl rsync sgml-base sgml-data \
           tar tcl tcl8.6 tk tk-dev unzip wget xfsprogs xml-core xmlto xsltproc \
-          libzip5 libzip-dev vim xvfb xz-utils zip zlib1g-dev \
+          libzip5 libzip-dev uuid-runtime vim xvfb xz-utils zip zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LC_CTYPE="C.UTF-8"
@@ -145,7 +145,7 @@ RUN apt install -y python3-pip
 RUN apt install -y python3-pip python3.11-venv \
     && python3.11 -m ensurepip --upgrade \
     && python3.11 -m pip install --no-cache-dir --upgrade pip setuptools
-RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.16.0 boto3 botocore
+RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.16.0 boto3 botocore PyMySQL
 #DEBUG line, remove when not needed
 RUN ansible --version
 
@@ -192,8 +192,21 @@ COPY tools/runtime_configs/php/$PHP_83_VERSION /root/.phpenv/plugins/php-build/s
 RUN phpenv install $PHP_83_VERSION && rm -rf /tmp/* && phpenv global $PHP_83_VERSION
 RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/conf.d/memory.ini"
 
+# Install PHP extensions using pecl
+RUN apt-get update && apt-get install -y \
+    php-pear libonig-dev libcurl4-openssl-dev libxml2-dev libzip-dev \
+    && pecl install mbstring curl xml zip \
+    && echo "extension=mbstring.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
+    && echo "extension=curl.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
+    && echo "extension=xml.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
+    && echo "extension=zip.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini"
+
 # Install Composer globally
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp --filename=composer.phar \
+    && mv /tmp/composer.phar /usr/local/bin/composer \
+    && chmod +x /usr/local/bin/composer \
+    && composer --version
+RUN php -m
 #****************      END PHP     ****************************************************
 
 
