@@ -8,7 +8,7 @@
 # or in the "license" file accompanying this file.
 # This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
-FROM public.ecr.aws/ubuntu/ubuntu:20.04 AS core
+FROM ubuntu:20.04 AS core
 
 ARG DEBIAN_FRONTEND="noninteractive"
 
@@ -137,17 +137,13 @@ RUN ln -sf /usr/bin/python3.11 /usr/bin/python3 && python3 --version
 RUN curl https://pyenv.run | bash
 ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
 
-# Install ansible
-#ENV PYTHONUNBUFFERED=1
-#RUN apk add --update --no-cache python3 git aws-cli bash zip openssh && ln -sf python3 /usr/bin/python
-RUN apt install -y python3-pip
-# Install Python 3.11 and pip
+# Ansible
 RUN apt install -y python3-pip python3.11-venv \
     && python3.11 -m ensurepip --upgrade \
     && python3.11 -m pip install --no-cache-dir --upgrade pip setuptools
-RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.16.0 boto3 botocore PyMySQL
-#DEBUG line, remove when not needed
-RUN ansible --version
+RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.15.12 boto3 botocore PyMySQL
+RUN ansible-galaxy collection install community.general amazon.aws \
+    && pip3 install jmespath
 
 #php
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
