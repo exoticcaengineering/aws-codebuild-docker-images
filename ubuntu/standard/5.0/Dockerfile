@@ -13,6 +13,8 @@ FROM ubuntu:20.04 AS core
 ARG DEBIAN_FRONTEND="noninteractive"
 
 # Install git, SSH, and other utilities
+RUN echo 'Acquire::http::Timeout "120";' >> /etc/apt/apt.conf
+RUN echo 'Acquire::Retries "5";' >> /etc/apt/apt.conf
 RUN set -ex \
     && echo 'Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/99use-gzip-compression \
     && apt-get update \
