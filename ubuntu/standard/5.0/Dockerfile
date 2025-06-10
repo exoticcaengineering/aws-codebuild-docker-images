@@ -180,22 +180,39 @@ RUN     n $NODE_22_VERSION && npm install --save-dev -g -f grunt && npm install 
 
 #****************      PHP     ****************************************************
 ENV PHP_83_VERSION="8.3.16"
+ENV PHP_84_VERSION="8.4.7"
 
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
 ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
 
+# Copy PHP build definitions for both versions
 COPY tools/runtime_configs/php/$PHP_83_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_83_VERSION
-RUN phpenv install $PHP_83_VERSION && rm -rf /tmp/* && phpenv global $PHP_83_VERSION
-RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/conf.d/memory.ini"
+COPY tools/runtime_configs/php/$PHP_84_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_84_VERSION
 
-# Install PHP extensions using pecl
+# Install both PHP versions
+RUN phpenv install $PHP_83_VERSION && phpenv install $PHP_84_VERSION && rm -rf /tmp/*
+
+# Set global PHP version to 8.3.16 by default
+RUN phpenv global $PHP_83_VERSION
+
+# Set memory limit for both versions
+RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/conf.d/memory.ini" \
+    && echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_84_VERSION/etc/conf.d/memory.ini"
+
+# Install PHP extensions using pecl for both versions
 RUN apt-get update && apt-get install -y \
     php-pear libonig-dev libcurl4-openssl-dev libxml2-dev libzip-dev \
-    && pecl install mbstring curl xml zip \
-    && echo "extension=mbstring.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
-    && echo "extension=curl.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
-    && echo "extension=xml.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
-    && echo "extension=zip.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini"
+    && for v in $PHP_83_VERSION $PHP_84_VERSION; do \
+        phpenv global $v; \
+        pecl install mbstring curl xml zip; \
+        echo "extension=mbstring.so" >> "/root/.phpenv/versions/$v/etc/php.ini"; \
+        echo "extension=curl.so" >> "/root/.phpenv/versions/$v/etc/php.ini"; \
+        echo "extension=xml.so" >> "/root/.phpenv/versions/$v/etc/php.ini"; \
+        echo "extension=zip.so" >> "/root/.phpenv/versions/$v/etc/php.ini"; \
+    done
+
+# Restore default global PHP version
+RUN phpenv global $PHP_83_VERSION
 
 # Install Composer globally
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp --filename=composer.phar \
