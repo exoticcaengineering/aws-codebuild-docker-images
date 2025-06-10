@@ -179,30 +179,21 @@ RUN     n $NODE_22_VERSION && npm install --save-dev -g -f grunt && npm install 
 
 
 #****************      PHP     ****************************************************
-ENV PHP_83_VERSION="8.3.16"
-
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
 ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
 
-COPY tools/runtime_configs/php/$PHP_83_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_83_VERSION
-RUN phpenv install $PHP_83_VERSION && rm -rf /tmp/* && phpenv global $PHP_83_VERSION
-RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/conf.d/memory.ini"
+ENV PHP_83_VERSION="8.3.16"
+# Set environment variables for PHP configure options
+ENV PHP_BUILD_CONFIGURE_OPTS="--with-curl --with-password-argon2 --with-pdo-pgsql --with-libedit"
+# Set make arguments to use 4 parallel jobs.
+ENV PHP_BUILD_EXTRA_MAKE_ARGUMENTS="-j4"
 
-# Install PHP extensions using pecl
-RUN apt-get update && apt-get install -y \
-    php-pear libonig-dev libcurl4-openssl-dev libxml2-dev libzip-dev \
-    && pecl install mbstring curl xml zip \
-    && echo "extension=mbstring.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
-    && echo "extension=curl.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
-    && echo "extension=xml.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini" \
-    && echo "extension=zip.so" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/php.ini"
-
-# Install Composer globally
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp --filename=composer.phar \
-    && mv /tmp/composer.phar /usr/local/bin/composer \
-    && chmod +x /usr/local/bin/composer \
-    && composer --version
-RUN php -m
+RUN phpenv update \
+    && phpenv install $PHP_83_VERSION \
+    && phpenv global $PHP_83_VERSION \
+    && php -v \
+    && echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_83_VERSION/etc/conf.d/memory.ini" \    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
+    && rm -rf /tmp/*
 #****************      END PHP     ****************************************************
 
 
@@ -246,9 +237,8 @@ VOLUME /var/lib/docker
 FROM runtimes_n_corretto AS std_v5
 
 # Activate runtime versions specific to image version.
-RUN n $NODE_20_VERSION
-RUN pyenv  global $PYTHON_39_VERSION
-RUN phpenv global $PHP_80_VERSION
+RUN n $NODE_22_VERSION
+RUN phpenv global $PHP_83_VERSION
 
 # Configure SSH
 COPY ssh_config /root/.ssh/config
