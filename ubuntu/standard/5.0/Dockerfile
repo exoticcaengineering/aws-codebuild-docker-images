@@ -8,7 +8,7 @@
 # or in the "license" file accompanying this file.
 # This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
-FROM ubuntu:20.04 AS core
+FROM ubuntu:22.04 AS core
 
 ARG DEBIAN_FRONTEND="noninteractive"
 
@@ -47,9 +47,9 @@ RUN set -ex \
           libtool libwebp-dev libxml2-dev libxml2-utils libxslt1-dev \
           libyaml-dev libyaml-perl llvm locales make mlocate \
           netbase openssl patch pkg-config procps python3.11 python3.11-distutils \
-          python3-configobj python3.11-venv python-openssl rsync sgml-base sgml-data \
+          python3-configobj python3.11-venv python3-openssl rsync sgml-base sgml-data \
           tar tcl tcl8.6 tk tk-dev unzip wget xfsprogs xml-core xmlto xsltproc \
-          libzip5 libzip-dev uuid-runtime vim xvfb xz-utils zip zlib1g-dev \
+          libzip4 libzip-dev uuid-runtime vim xvfb xz-utils zip zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LC_CTYPE="C.UTF-8"
@@ -59,17 +59,6 @@ RUN useradd codebuild-user
 #=======================End of layer: core  =================
 
 FROM core AS tools
-
-# Install Firefox
-RUN set -ex \
-    && apt-add-repository -y "deb http://archive.canonical.com/ubuntu $(lsb_release -sc) partner" \
-    && apt-get install -y -qq firefox \
-    && firefox --version
-
-# Install GeckoDriver
-RUN set -ex \
-    && apt-get install -y -qq firefox-geckodriver \
-    && geckodriver --version
 
 # Install Chrome
 RUN set -ex \
