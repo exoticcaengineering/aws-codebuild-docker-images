@@ -8,7 +8,7 @@
 # or in the "license" file accompanying this file.
 # This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
-FROM ubuntu:22.04 AS core
+FROM ubuntu:24.04 AS core
 
 ARG DEBIAN_FRONTEND="noninteractive"
 
@@ -25,7 +25,6 @@ RUN set -ex \
     && apt-get install git=1:2.* -y -qq --no-install-recommends \
     && git version \
     && apt-get install -y -qq --no-install-recommends openssh-client \
-    && mkdir ~/.ssh \
     && mkdir -p /codebuild/image/config \
     && touch ~/.ssh/known_hosts \
     && ssh-keyscan -t rsa,dsa -H github.com >> ~/.ssh/known_hosts \
@@ -36,7 +35,7 @@ RUN set -ex \
           bzr curl dirmngr docbook-xml docbook-xsl dpkg-dev \
           e2fsprogs expect fakeroot file g++ gcc gettext gettext-base \
           groff gzip iptables jq less libapr1 libaprutil1 \
-          libargon2-0-dev libbz2-dev libc6-dev libcurl4-openssl-dev \
+          libargon2-dev libbz2-dev libc6-dev libcurl4-openssl-dev \
           libdb-dev libdbd-sqlite3-perl libdbi-perl libdpkg-perl \
           libedit-dev liberror-perl libevent-dev libffi-dev libgeoip-dev \
           libglib2.0-dev libhttp-date-perl libio-pty-perl libjpeg-dev \
@@ -45,8 +44,8 @@ RUN set -ex \
           libpq-dev libreadline-dev libserf-1-1 libsodium-dev libsqlite3-dev libssl-dev \
           libsvn1 libsvn-perl libtcl8.6 libtidy-dev libtimedate-perl \
           libtool libwebp-dev libxml2-dev libxml2-utils libxslt1-dev \
-          libyaml-dev libyaml-perl llvm locales make mlocate \
-          netbase openssl patch pkg-config procps python3.11 python3.11-distutils \
+          libyaml-dev libyaml-perl llvm locales make netbase openssl patch \
+          plocate pkg-config procps python3.11 python3.11-distutils \
           python3-configobj python3.11-venv python3-openssl rsync sgml-base sgml-data \
           tar tcl tcl8.6 tk tk-dev unzip wget xfsprogs xml-core xmlto xsltproc \
           libzip4 libzip-dev uuid-runtime vim xvfb xz-utils zip zlib1g-dev \
@@ -127,12 +126,18 @@ RUN curl https://pyenv.run | bash
 ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
 
 # Ansible
-RUN apt install -y python3-pip python3.11-venv \
-    && python3.11 -m ensurepip --upgrade \
-    && python3.11 -m pip install --no-cache-dir --upgrade pip setuptools
-RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.15.12 boto3 botocore PyMySQL
-RUN ansible-galaxy collection install community.general amazon.aws \
-    && pip3 install jmespath
+RUN set -ex \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends python3.11-venv \
+ && python3.11 -m venv /opt/ansible-venv \
+ && /opt/ansible-venv/bin/python -m pip install --no-cache-dir -U pip setuptools wheel \
+ && /opt/ansible-venv/bin/pip install --no-cache-dir \
+      ansible-core==2.15.12 boto3 botocore PyMySQL \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/opt/ansible-venv/bin:$PATH"
+
+RUN ansible-galaxy collection install community.general amazon.aws
 
 #php
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
