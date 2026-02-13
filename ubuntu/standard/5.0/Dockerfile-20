@@ -130,7 +130,7 @@ ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
 RUN apt install -y python3-pip python3.11-venv \
     && python3.11 -m ensurepip --upgrade \
     && python3.11 -m pip install --no-cache-dir --upgrade pip setuptools
-RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.16.0 boto3 botocore PyMySQL
+RUN pip3 install --no-cache-dir --force-reinstall ansible-core==2.19.2 boto3 botocore PyMySQL
 RUN ansible-galaxy collection install community.general amazon.aws \
     && pip3 install jmespath
 
